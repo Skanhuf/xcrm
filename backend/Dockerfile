@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
+RUN pip install --no-cache-dir --index-url https://pypi.org/simple/ --extra-index-url https://mirrors.yandex.ru/pypi/simple/ -r requirements.txt
 
 COPY . .
 
