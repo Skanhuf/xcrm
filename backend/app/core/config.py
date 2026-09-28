@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, List
-from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -16,17 +15,10 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "XCRM"
     DEBUG: bool = True
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # Tenancy
     DEFAULT_TENANT_SLUG: str = "demo"
-
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 
