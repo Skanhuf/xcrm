@@ -1,0 +1,147 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== ТЕСТЫ =====
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: xcrm_test
+          POSTGRES_USER: xcrm
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=xml
+        env:
+          DATABASE_URL: postgresql+psycopg2://xcrm:test@localhost:5432/xcrm_test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: success()
+
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run linting
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Run tests
+        run: |
+          cd frontend
+          npm test
+
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+
+  # ===== ПРОВЕРКА КАЧЕСТВА =====
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Python formatting
+        uses: psf/black@stable
+        with:
+          options: "--check --line-length 120"
+          src: "./backend"
+
+      - name: Check ruff
+        run: |
+          pip install ruff
+          ruff check backend/
+
+  # ===== ДЕПЛОЙ =====
+  deploy-staging:
+    needs: [test-backend, test-frontend, quality]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & Deploy to Staging
+        run: |
+          echo "Deploying to staging server..."
+          # SSH to staging server
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGING_HOST }} << EOF
+            cd /opt/xcrm
+            docker compose pull
+            docker compose up -d --build
+            docker system prune -f
+          EOF
+
+  deploy-production:
+    needs: [test-backend, test-frontend, quality]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker compose -f docker-compose.prod.yml build
+
+      - name: Push to registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          docker compose -f docker-compose.prod.yml push
+
+      - name: Deploy to Production
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_HOST }} << EOF
+            cd /opt/xcrm
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+            docker system prune -f
+          EOF
