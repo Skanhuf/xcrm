@@ -334,3 +334,51 @@ class DashboardStats(BaseModel):
 class MonthlyRevenue(BaseModel):
     month: str
     revenue: float
+
+
+# ===================== Work Templates =====================
+
+
+class WorkTemplateItemCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    price: float = 0
+    hours: float = 0
+    part_name: Optional[str] = ""
+    part_qty: float = 0
+    part_price: float = 0
+
+
+class WorkTemplateItemOut(BaseModel):
+    id: int
+    name: str
+    price: float
+    hours: float
+    part_name: str
+    part_qty: float
+    part_price: float
+
+    model_config = {"from_attributes": True}
+
+
+class WorkTemplateCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = ""
+    is_default: bool = False
+    items: Optional[List[WorkTemplateItemCreate]] = []
+
+
+class WorkTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_default: Optional[bool] = None
+    items: Optional[List[WorkTemplateItemCreate]] = None
+
+
+class WorkTemplateOut(BaseModel):
+    id: int
+    name: str
+    description: str
+    is_default: bool
+    items: List[WorkTemplateItemOut] = []
+
+    model_config = {"from_attributes": True}

@@ -235,6 +235,39 @@ class WarehousePart(TenantModel):
     )
 
 
+# ===================== Work Templates =====================
+
+
+class WorkTemplate(TenantModel):
+    __tablename__ = "work_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (
+        Index("ix_templates_tenant", "tenant_id"),
+    )
+
+
+class WorkTemplateItem(TenantModel):
+    __tablename__ = "work_template_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[int] = mapped_column(Integer, ForeignKey("work_templates.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    price: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0)
+    hours: Mapped[float] = mapped_column(DECIMAL(5, 2), default=0)
+    part_name: Mapped[str] = mapped_column(String(200), default="")
+    part_qty: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0)
+    part_price: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0)
+
+    __table_args__ = (
+        Index("ix_template_items_tenant", "tenant_id"),
+    )
+
+
 # ===================== Finance =====================
 
 

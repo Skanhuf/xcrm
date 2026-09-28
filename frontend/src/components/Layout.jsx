@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
@@ -9,15 +10,26 @@ const navItems = [
   { path: '/cars', label: 'Автомобили', icon: '🚗' },
   { path: '/warehouse', label: 'Склад', icon: '📦' },
   { path: '/finance', label: 'Финансы', icon: '💰' },
+  { path: '/templates', label: 'Шаблоны', icon: '📋' },
 ];
 
 export default function Layout() {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    setSearchOpen(false);
+    setSearchQuery('');
   };
 
   return (
@@ -52,7 +64,28 @@ export default function Layout() {
           </div>
         </div>
       </aside>
+
+      {/* Main */}
       <main className="flex-1 ml-64 min-h-screen">
+        {/* Header with search */}
+        <div className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-accent/10 px-6 py-3">
+          <div className="flex items-center justify-end gap-4">
+            <button onClick={() => setSearchOpen(!searchOpen)} className="text-slate-400 hover:text-white transition-colors">
+              {searchOpen ? '✕' : '🔍'}
+            </button>
+            <span className="text-xs text-slate-600">Ctrl+K</span>
+          </div>
+
+          {searchOpen && (
+            <form onSubmit={handleSearch} className="mt-3 animate-fade-in">
+              <div className="relative">
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Поиск по заказам, клиентам, авто, запчастям..."
+                  className="w-full px-4 py-3 rounded-xl bg-card border border-accent/20 text-white placeholder-slate-600 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10" autoFocus />
+              </div>
+            </form>
+          )}
+        </div>
+
         <div className="p-6">
           <Outlet />
         </div>

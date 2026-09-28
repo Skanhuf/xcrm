@@ -6,6 +6,8 @@ import KanbanBoard from './pages/KanbanBoard';
 import Clients from './pages/Clients';
 import Warehouse from './pages/Warehouse';
 import Finance from './pages/Finance';
+import Templates from './pages/Templates';
+import SearchPage from './pages/SearchPage';
 import NewOrder from './pages/NewOrder';
 import Cars from './pages/Cars';
 import OrderDetail from './pages/OrderDetail';
@@ -23,6 +25,8 @@ function ProtectedRoutes() {
         <Route path="/cars" element={<Cars />} />
         <Route path="/warehouse" element={<Warehouse />} />
         <Route path="/finance" element={<Finance />} />
+        <Route path="/templates" element={<Templates />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/order/new" element={<NewOrder />} />
         <Route path="/order/:id" element={<OrderDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
