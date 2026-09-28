@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir --index-url https://pypi.org/simple/ --extra-inde
 
 COPY . .
 
-RUN python -m alembic init alembic
+RUN mkdir -p alembic/versions
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
