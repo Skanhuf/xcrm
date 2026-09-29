@@ -1,6 +1,7 @@
-from sqlalchemy import String, Text, Integer, Boolean, Enum as SAEnum, DECIMAL, ForeignKey, DateTime, Index, UniqueConstraint
+from sqlalchemy import String, Text, Integer, Boolean, Enum as SAEnum, DECIMAL, ForeignKey, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
+from typing import List
 
 from app.core.database import Base
 from app.core.mixins import TimestampMixin
@@ -70,9 +71,9 @@ class User(TenantModel):
     status: Mapped[EmployeeStatus] = mapped_column(SAEnum(EmployeeStatus), default=EmployeeStatus.ACTIVE)
 
     # Relationships
-    orders_created: list["Order"] = relationship("Order", back_populates="manager", foreign_keys="Order.manager_id")
-    orders_assigned: list["Order"] = relationship("Order", back_populates="mechanic", foreign_keys="Order.mechanic_id")
-    works_done: list["OrderWork"] = relationship("OrderWork", back_populates="employee")
+    orders_created: Mapped[List["Order"]] = relationship("Order", back_populates="manager", foreign_keys="Order.manager_id")
+    orders_assigned: Mapped[List["Order"]] = relationship("Order", back_populates="mechanic", foreign_keys="Order.mechanic_id")
+    works_done: Mapped[List["OrderWork"]] = relationship("OrderWork", back_populates="employee")
 
     __table_args__ = (
         Index("ix_users_tenant", "tenant_id"),
@@ -94,8 +95,8 @@ class Client(TenantModel):
     notes: Mapped[str] = mapped_column(Text, default="")
 
     # Relationships
-    cars: list["Car"] = relationship("Car", back_populates="client", cascade="all, delete-orphan")
-    orders: list["Order"] = relationship("Order", back_populates="client", cascade="all, delete-orphan")
+    cars: Mapped[List["Car"]] = relationship("Car", back_populates="client", cascade="all, delete-orphan")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="client", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_clients_tenant", "tenant_id"),
@@ -122,7 +123,7 @@ class Car(TenantModel):
 
     # Relationships
     client: Mapped["Client"] = relationship("Client", back_populates="cars")
-    orders: list["Order"] = relationship("Order", back_populates="car", cascade="all, delete-orphan")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="car", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_cars_tenant", "tenant_id"),
@@ -154,11 +155,11 @@ class Order(TenantModel):
 
     # Relationships
     car: Mapped["Car"] = relationship("Car", back_populates="orders")
-    client: Mapped["Client"] = relationship("Order", back_populates="orders")
+    client: Mapped["Client"] = relationship("Client", back_populates="orders")
     manager: Mapped["User"] = relationship("User", back_populates="orders_created", foreign_keys=[manager_id])
     mechanic: Mapped["User"] = relationship("User", back_populates="orders_assigned", foreign_keys=[mechanic_id])
-    works: list["OrderWork"] = relationship("OrderWork", back_populates="order", cascade="all, delete-orphan")
-    parts: list["OrderPart"] = relationship("OrderPart", back_populates="order", cascade="all, delete-orphan")
+    works: Mapped[List["OrderWork"]] = relationship("OrderWork", back_populates="order", cascade="all, delete-orphan")
+    parts: Mapped[List["OrderPart"]] = relationship("OrderPart", back_populates="order", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_orders_tenant", "tenant_id"),
@@ -183,7 +184,7 @@ class OrderWork(TenantModel):
 
     # Relationships
     order: Mapped["Order"] = relationship("Order", back_populates="works")
-    employee: Mapped["User"] = relationship("OrderWork", back_populates="works_done")
+    employee: Mapped["User"] = relationship("User", back_populates="works_done")
 
     __table_args__ = (
         Index("ix_order_works_tenant", "tenant_id"),
@@ -276,7 +277,7 @@ class FinanceEntry(TenantModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=True)
-    type: Mapped[str] = mapped_column(String(20), nullable=False)  # income / expense
+    type: Mapped[str] = mapped_column(String(20), nullable=False)
     amount: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0)
     method: Mapped[PaymentMethod] = mapped_column(SAEnum(PaymentMethod), default=PaymentMethod.CASH)
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
