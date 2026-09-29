@@ -23,7 +23,6 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-xcrm}:${POSTGRES_PASSWORD:-xcrm_secret}@postgres:5432/${POSTGRES_DB:-xcrm}
       SECRET_KEY: ${SECRET_KEY:-change-me}
       DEBUG: 'false'
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
