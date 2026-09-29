@@ -14,7 +14,6 @@ class Settings:
     # App
     APP_NAME = "XCRM"
     DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-    CORS_ORIGINS = ["http://localhost:5173", "http://localhost:3000"]
 
     # Tenancy
     DEFAULT_TENANT_SLUG = "demo"

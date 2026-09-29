@@ -4,37 +4,74 @@
 
 ## 🚀 Быстрый старт
 
-### 1. Запуск локально
+### Локальная разработка
 
+#### Backend (FastAPI)
 ```bash
-# База данных
-docker compose up -d
-
-# Backend
 cd backend
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Frontend
+# Создай виртуальное окружение
+python -m venv venv
+# Windows: venv\Scripts\activate
+# Linux: source venv/bin/activate
+
+# Установи зависимости
+pip install -r requirements.txt
+
+# Запусти
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+API будет доступен: http://localhost:8000
+Swagger docs: http://localhost:8000/docs
+
+#### Frontend (React)
+```bash
 cd frontend
+
+# Установи зависимости
 npm install
+
+# Запусти dev-сервер
 npm run dev
 ```
 
-Открыть: http://localhost:5173
+Фронтенд будет доступен: http://localhost:5173
 
-### 2. Продакшен (Docker)
+### Продакшен (Docker)
 
+#### 1. Настройка переменных
 ```bash
-# Создать .env файл
+# Скопируй пример
 cp .env.example .env
-# Отредактировать .env — изменить пароли и SECRET_KEY!
 
-# Запустить всё
-docker compose -f docker-compose.prod.yml up -d --build
+# Отредактируй .env
+nano .env
+```
 
-# Открыть: http://localhost
+Заполни значения:
+- `POSTGRES_PASSWORD` — сложный пароль для БД
+- `SECRET_KEY` — сгенерируй: `openssl rand -hex 32`
+
+#### 2. Запуск
+```bash
+# Собери и запусти
+sudo docker compose -f docker-compose.prod.yml up -d --build
+
+# Создай таблицы БД
+sudo docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+# Проверить
+sudo docker compose -f docker-compose.prod.yml ps
+```
+
+Приложение будет доступно: http://your-server-ip
+
+#### 3. Обновление
+```bash
+git pull
+sudo docker compose -f docker-compose.prod.yml up -d --build
+sudo docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
 ```
 
 ## 📁 Структура
@@ -48,14 +85,15 @@ xcrm/
 │   │   ├── schemas/   # Pydantic схемы
 │   │   └── core/      # Config, DB, Security
 │   ├── tests/         # Backend тесты
-│   └── alembic/       # Миграции
+│   └── alembic/       # Миграции БД
 ├── frontend/          # React + Vite + Tailwind
 │   ├── src/
 │   │   ├── pages/     # Страницы
 │   │   ├── components/
 │   │   └── store/     # Zustand state
 │   └── tests/         # Frontend тесты
-├── .github/           # CI/CD
+├── .env.example       # Пример переменных (без паролей!)
+├── .env               # Твои переменные (НЕ КОММИТЬ!)
 └── docker-compose.prod.yml
 ```
 
@@ -75,6 +113,8 @@ xcrm/
 | GET | `/api/warehouse` | Склад |
 | POST | `/api/finance` | Добавить операцию |
 | GET | `/api/dashboard/stats` | Статистика |
+| GET | `/api/templates` | Шаблоны работ |
+| POST | `/api/templates` | Создать шаблон |
 
 ## 🧪 Тесты
 
@@ -96,17 +136,17 @@ GitHub Actions автоматически:
 - Деплоит на staging (develop branch)
 - Деплоит на production (main branch)
 
+## 📦 Деплой
+
+1. Купи VPS (Ubuntu 22.04, 2GB RAM минимум)
+2. Установи Docker и Docker Compose
+3. Клонируй репозиторий
+4. Настрой .env
+5. Запусти: `sudo docker compose -f docker-compose.prod.yml up -d --build`
+6. Создай таблицы: `sudo docker compose exec backend alembic upgrade head`
+
 ## 💰 Модели монетизации
 
 - **SaaS подписка**: от 2 990 ₽/мес
 - **Free trial**: 14 дней
 - **Self-hosted**: для крупных СТО
-
-## 📦 Деплой
-
-1. Купите VPS (Ubuntu 22.04, 2GB RAM минимум)
-2. Установите Docker и Docker Compose
-3. Клонируйте репозиторий
-4. Настройте .env
-5. Запустите: `docker compose -f docker-compose.prod.yml up -d`
-6. Настройте домен и HTTPS (Let's Encrypt)
