@@ -24,9 +24,21 @@ router = APIRouter(prefix="/api/templates", tags=["Work Templates"])
 async def get_templates(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, description="Search by template name"),
 ):
-    """Get all work templates for tenant."""
+    """Get all work templates for current tenant.
+
+    Templates are sorted by is_default (default first) then by name.
+    Each template includes its items (work tasks + optional parts).
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+        search: Optional search query for template name.
+
+    Returns:
+        List[WorkTemplateOut]: Templates with their items.
+    """
     query = select(WorkTemplate).where(
         WorkTemplate.tenant_id == current_user.tenant_id
     )
@@ -75,7 +87,19 @@ async def get_template(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single template with items."""
+    """Get a single template with all its items.
+
+    Args:
+        template_id: Template database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WorkTemplateOut: Template with all items.
+
+    Raises:
+        HTTPException 404: Template not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WorkTemplate).where(
             WorkTemplate.id == template_id,
@@ -120,7 +144,20 @@ async def create_template(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new work template."""
+    """Create a new work procedure template with items.
+
+    Creates the template first, then adds all items in a single transaction.
+    If items are provided, they are saved immediately.
+
+    Args:
+        data: WorkTemplateCreate with name (required), description,
+              is_default flag, and optional items list.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WorkTemplateOut: Created template with all items.
+    """
     template = WorkTemplate(
         name=data.name,
         description=data.description or "",
@@ -184,7 +221,23 @@ async def update_template(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update template and replace items."""
+    """Update a template and replace all its items.
+
+    When updating, existing items are deleted and replaced with
+    the new items list. This is an all-or-nothing update.
+
+    Args:
+        template_id: Template database ID.
+        data: WorkTemplateUpdate with fields to update and optional items list.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WorkTemplateOut: Updated template with new items.
+
+    Raises:
+        HTTPException 404: Template not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WorkTemplate).where(
             WorkTemplate.id == template_id,
@@ -256,7 +309,19 @@ async def delete_template(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a template."""
+    """Delete a work template and all its items.
+
+    Note:
+        Items are deleted as part of the cascade when the template is deleted.
+
+    Args:
+        template_id: Template database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Raises:
+        HTTPException 404: Template not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WorkTemplate).where(
             WorkTemplate.id == template_id,

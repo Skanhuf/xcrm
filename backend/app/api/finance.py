@@ -28,13 +28,26 @@ router = APIRouter(prefix="/api", tags=["Finance & Dashboard"])
 async def get_finance(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    type: Optional[str] = Query(None),
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
-    skip: int = 0,
-    limit: int = 100,
+    type: Optional[str] = Query(None, description="Filter by type: 'income' or 'expense'"),
+    start_date: Optional[str] = Query(None, description="Start date (ISO format: 2024-01-01)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format: 2024-12-31)"),
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(100, ge=1, le=500, description="Page size (max 500)"),
 ):
-    """Get finance entries with filters."""
+    """Get financial entries with optional filters and date range.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+        type: Optional filter: "income" or "expense".
+        start_date: Optional start date in ISO format.
+        end_date: Optional end date in ISO format.
+        skip: Pagination offset (default: 0).
+        limit: Page size (default: 100, max: 500).
+
+    Returns:
+        List[FinanceEntryOut]: Filtered and paginated financial entries, sorted by date desc.
+    """
     query = select(FinanceEntry).where(
         FinanceEntry.tenant_id == current_user.tenant_id
     )
@@ -61,7 +74,17 @@ async def create_finance(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a finance entry (income or expense)."""
+    """Record a financial transaction (income or expense).
+
+    Args:
+        data: FinanceEntryCreate with type ("income"/"expense"), amount (>0),
+              method, optional order_id and description.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        FinanceEntryOut: Created transaction with auto-generated id and date.
+    """
     entry = FinanceEntry(
         order_id=data.order_id,
         type=data.type,
@@ -83,7 +106,21 @@ async def get_finance_summary(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get finance summary for current month."""
+    """Get financial summary for the current month with trend vs last month.
+
+    Calculates:
+        - Total income this month
+        - Total expenses this month
+        - Net profit (income - expenses)
+        - Revenue trend percentage vs last month
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        dict: {income_month, expense_month, profit, trend}
+    """
     now = datetime.now()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0)
     start_of_last_month = (now.replace(day=1) - timedelta(days=1)).replace(day=1)
@@ -142,7 +179,23 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get dashboard statistics."""
+    """Get comprehensive dashboard statistics for the current period.
+
+    Calculates:
+        - Today's revenue and order count
+        - Active orders count (non-completed)
+        - Monthly revenue and completed orders
+        - Average check size (revenue / completed orders)
+        - Total clients and cars in the system
+        - Revenue trend (vs last month)
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        DashboardStats: All dashboard metrics.
+    """
     now = datetime.now()
     today = now.replace(hour=0, minute=0, second=0)
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0)
@@ -265,7 +318,17 @@ async def get_monthly_revenue(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get monthly revenue for the last 6 months."""
+    """Get monthly revenue for the last 6 months.
+
+    Useful for building revenue trend charts in the dashboard.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        List[MonthlyRevenue]: 6 months of data with month name and revenue.
+    """
     now = datetime.now()
     months = []
     for i in range(5, -1, -1):

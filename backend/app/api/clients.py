@@ -20,11 +20,25 @@ router = APIRouter(prefix="/api/clients", tags=["Clients"])
 async def get_clients(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    search: Optional[str] = Query(None),
-    skip: int = 0,
-    limit: int = 100,
+    search: Optional[str] = Query(None, description="Search by name, phone, or email"),
+    skip: int = Query(0, ge=0, description="Number of records to skip (pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Max number of records to return"),
 ):
-    """Get paginated clients list."""
+    """Get paginated list of clients for current tenant.
+
+    Supports fuzzy search across name, phone, and email fields.
+    Each client is enriched with car_count and order_count.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user (auto-injected).
+        search: Optional search query string.
+        skip: Pagination offset (default: 0).
+        limit: Page size (default: 100, max: 500).
+
+    Returns:
+        List[ClientOut]: Paginated list of clients with aggregated counts.
+    """
     query = select(Client).where(Client.tenant_id == current_user.tenant_id)
 
     if search:
@@ -70,7 +84,19 @@ async def get_client(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single client by ID."""
+    """Get a single client by ID with car count.
+
+    Args:
+        client_id: Client database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        ClientOut: Client data with car_count.
+
+    Raises:
+        HTTPException 404: Client not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Client).where(
             Client.id == client_id,
@@ -104,7 +130,19 @@ async def create_client(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new client."""
+    """Create a new client for the current tenant.
+
+    Args:
+        data: ClientCreate with name (required) and optional phone, email, company, address, notes.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        ClientOut: Created client data with auto-generated id and tenant_id.
+
+    Note:
+        tenant_id is automatically set from the authenticated user's tenant.
+    """
     client = Client(
         name=data.name,
         phone=data.phone,
@@ -129,7 +167,22 @@ async def update_client(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update client info."""
+    """Update an existing client. Only provided fields are updated.
+
+    Uses Pydantic's exclude_unset to update only fields that were sent in the request.
+
+    Args:
+        client_id: Client database ID.
+        data: ClientUpdate with fields to update (all optional).
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        ClientOut: Updated client data.
+
+    Raises:
+        HTTPException 404: Client not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Client).where(
             Client.id == client_id,
@@ -155,7 +208,21 @@ async def delete_client(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a client."""
+    """Delete a client and all associated cars (cascade).
+
+    Note:
+        Cars have cascade="all, delete-orphan" so deleting a client
+        also deletes their associated cars. Orders are NOT deleted
+        (they have cascade but are typically soft-deleted in production).
+
+    Args:
+        client_id: Client database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Raises:
+        HTTPException 404: Client not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Client).where(
             Client.id == client_id,

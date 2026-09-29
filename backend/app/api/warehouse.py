@@ -23,13 +23,29 @@ router = APIRouter(prefix="/api/warehouse", tags=["Warehouse"])
 async def get_parts(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    category: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    low_stock: bool = False,
-    skip: int = 0,
-    limit: int = 100,
+    category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Search by name or SKU"),
+    low_stock: bool = Query(False, description="Show only parts below minimum quantity"),
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(100, ge=1, le=500, description="Page size (max 500)"),
 ):
-    """Get warehouse parts with filters."""
+    """Get warehouse parts with optional filters.
+
+    Supports filtering by category, low stock level, and full-text
+    search across name and SKU fields.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+        category: Optional category filter.
+        search: Optional search query for name or SKU.
+        low_stock: If True, only show parts where qty <= min_qty.
+        skip: Pagination offset (default: 0).
+        limit: Page size (default: 100, max: 500).
+
+    Returns:
+        List[WarehousePartOut]: Filtered and paginated parts list.
+    """
     query = select(WarehousePart).where(
         WarehousePart.tenant_id == current_user.tenant_id
     )
@@ -61,7 +77,15 @@ async def get_categories(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get all categories."""
+    """Get all unique categories for current tenant.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        List[str]: List of unique category names (empty strings excluded).
+    """
     result = await db.execute(
         select(WarehousePart.category)
         .where(WarehousePart.tenant_id == current_user.tenant_id)
@@ -75,7 +99,17 @@ async def get_low_stock(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get parts with low stock."""
+    """Get parts that are below minimum stock level.
+
+    Useful for generating reorder alerts in the UI.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        List[WarehousePartOut]: Parts where qty <= min_qty.
+    """
     result = await db.execute(
         select(WarehousePart)
         .where(
@@ -93,7 +127,19 @@ async def get_part(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single part by ID."""
+    """Get a single warehouse part by ID.
+
+    Args:
+        part_id: Part database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WarehousePartOut: Part data with pricing and stock info.
+
+    Raises:
+        HTTPException 404: Part not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WarehousePart).where(
             WarehousePart.id == part_id,
@@ -113,7 +159,17 @@ async def create_part(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new warehouse part."""
+    """Add a new part to the warehouse inventory.
+
+    Args:
+        data: WarehousePartCreate with name (required), sku, category,
+              qty, min_qty, buy_price, sell_price, notes.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WarehousePartOut: Created part data with auto-generated id and tenant_id.
+    """
     part = WarehousePart(
         name=data.name,
         sku=data.sku,
@@ -140,7 +196,20 @@ async def update_part(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update warehouse part."""
+    """Update warehouse part information. Only provided fields are updated.
+
+    Args:
+        part_id: Part database ID.
+        data: WarehousePartUpdate with fields to update (all optional).
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        WarehousePartOut: Updated part data.
+
+    Raises:
+        HTTPException 404: Part not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WarehousePart).where(
             WarehousePart.id == part_id,
@@ -166,7 +235,20 @@ async def delete_part(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a warehouse part."""
+    """Delete a warehouse part.
+
+    Note:
+        This does not delete OrderPart records that reference this part
+        (they store a copy of the data). Only clean up unused inventory items.
+
+    Args:
+        part_id: Part database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Raises:
+        HTTPException 404: Part not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(WarehousePart).where(
             WarehousePart.id == part_id,

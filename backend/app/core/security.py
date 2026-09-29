@@ -1,6 +1,7 @@
 """JWT authentication utilities.
 
 Provides token validation and current user extraction from requests.
+Used as FastAPI dependency for protected routes.
 """
 
 from fastapi import Depends, HTTPException, status
@@ -19,7 +20,30 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_async_session),
 ) -> User:
-    """Get current authenticated user from JWT token."""
+    """Extract and validate the current user from JWT token.
+
+    This is a FastAPI dependency - use it in any protected route:
+
+        @router.get("/protected")
+        async def protected_route(
+            user: User = Depends(get_current_user),
+            db: AsyncSession = Depends(get_async_session),
+        ):
+            ...
+
+    The token must be sent in the Authorization header:
+        Authorization: Bearer <jwt_token>
+
+    Args:
+        credentials: HTTPBearer credentials containing the JWT token.
+        db: Database session injected by FastAPI.
+
+    Returns:
+        User: The authenticated user object.
+
+    Raises:
+        HTTPException 401: Token is invalid, expired, or user not found.
+    """
     token = credentials.credentials
 
     try:

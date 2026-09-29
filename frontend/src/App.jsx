@@ -1,6 +1,19 @@
 /**
  * XCRM - CRM system for auto services.
  * Main application router with protected routes.
+ *
+ * Routes:
+ *   /login          - Public login page
+ *   /               - Dashboard (protected)
+ *   /kanban         - Kanban board for orders (protected)
+ *   /clients        - Client management (protected)
+ *   /cars           - Vehicle management (protected)
+ *   /warehouse      - Inventory management (protected)
+ *   /finance        - Financial tracking (protected)
+ *   /templates      - Work procedure templates (protected)
+ *   /search         - Global search (protected)
+ *   /order/new      - Create new order (protected)
+ *   /order/:id      - Order detail view (protected)
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -19,7 +32,9 @@ import OrderDetail from './pages/OrderDetail';
 import Layout from './components/Layout';
 
 /**
- * Protected routes wrapper - redirects to login if not authenticated.
+ * Protected routes wrapper.
+ * Redirects unauthenticated users to /login.
+ * Wraps all routes with Layout component for sidebar/header.
  */
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth();
@@ -43,6 +58,10 @@ function ProtectedRoutes() {
   );
 }
 
+/**
+ * Root application component.
+ * Sets up routing with public and protected paths.
+ */
 export default function App() {
   return (
     <BrowserRouter>

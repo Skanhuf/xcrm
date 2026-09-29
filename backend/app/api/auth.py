@@ -19,8 +19,22 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_async_session)):
-    """Login and get JWT token."""
+async def login(
+    data: LoginRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Authenticate user and return JWT access token.
+
+    Args:
+        data: Login credentials containing login and password.
+        db: Database session injected by FastAPI.
+
+    Returns:
+        TokenResponse with access_token (JWT) and token_type ("bearer").
+
+    Raises:
+        HTTPException 401: Invalid login or password.
+    """
     result = await db.execute(
         select(User).where(User.login == data.login)
     )
@@ -37,8 +51,22 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_async_session
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterRequest, db: AsyncSession = Depends(get_async_session)):
-    """Register a new user (first user in tenant becomes admin)."""
+async def register(
+    data: RegisterRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Register a new user. First user in tenant gets ADMIN role.
+
+    Args:
+        data: Registration data (name, login, password, optional phone).
+        db: Database session injected by FastAPI.
+
+    Returns:
+        UserOut with created user data.
+
+    Raises:
+        HTTPException 409: Login already exists.
+    """
     # Check if login exists
     result = await db.execute(select(User).where(User.login == data.login))
     if result.scalar_one_or_none():
@@ -70,5 +98,14 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_async_s
 
 @router.get("/me", response_model=UserOut)
 async def get_me(user: User = Depends(get_current_user)):
-    """Get current authenticated user info."""
+    """Get current authenticated user profile.
+
+    Requires valid JWT token in Authorization header.
+
+    Args:
+        user: Current user extracted from JWT token by get_current_user dependency.
+
+    Returns:
+        UserOut with current user's profile data.
+    """
     return UserOut.model_validate(user)

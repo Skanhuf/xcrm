@@ -8,7 +8,11 @@ import os
 
 
 class Settings:
-    """Application settings loaded from environment variables."""
+    """Application settings loaded from environment variables.
+
+    All values have sensible defaults for local development.
+    Override via environment variables in production.
+    """
 
     # Database
     # Sync URL for Alembic migrations
@@ -23,6 +27,7 @@ class Settings:
     )
 
     # JWT
+    # Generate with: openssl rand -hex 32
     SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours

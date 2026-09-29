@@ -21,14 +21,30 @@ router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
 
 def _calc_totals(order: Order) -> tuple[float, float, float]:
-    """Calculate works, parts, and total."""
+    """Calculate works cost, parts cost, and total for an order.
+
+    Args:
+        order: Order with populated works and parts relationships.
+
+    Returns:
+        Tuple of (total_works_cost, total_parts_cost, grand_total).
+    """
     total_works = sum(float(w.price) for w in order.works)
     total_parts = sum(float(p.price * p.qty) for p in order.parts)
     return total_works, total_parts, total_works + total_parts
 
 
 def _build_order_out(order: Order) -> OrderOut:
-    """Convert Order to OrderOut with calculated totals."""
+    """Convert Order ORM object to OrderOut response schema.
+
+    Populates works, parts, and calculates financial totals.
+
+    Args:
+        order: Order ORM object with eager-loaded works and parts.
+
+    Returns:
+        OrderOut: Serialized order data with calculated totals.
+    """
     works_out = [OrderWorkOut.model_validate(w) for w in order.works]
     parts_out = [OrderPartOut.model_validate(p) for p in order.parts]
     tw, tp, total = _calc_totals(order)
@@ -59,11 +75,24 @@ def _build_order_out(order: Order) -> OrderOut:
 async def get_orders(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    status: Optional[OrderStatus] = Query(None),
-    skip: int = 0,
-    limit: int = 100,
+    status: Optional[OrderStatus] = Query(None, description="Filter by order status"),
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(100, ge=1, le=500, description="Page size (max 500)"),
 ):
-    """Get paginated orders list."""
+    """Get paginated list of orders for current tenant.
+
+    Supports filtering by status and sorting by creation date (newest first).
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+        status: Optional filter by OrderStatus enum value.
+        skip: Pagination offset (default: 0).
+        limit: Page size (default: 100, max: 500).
+
+    Returns:
+        List[OrderOut]: Paginated orders with works, parts, and totals.
+    """
     query = select(Order).where(Order.tenant_id == current_user.tenant_id)
 
     if status:
@@ -81,7 +110,19 @@ async def get_kanban(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get orders grouped by status for Kanban board."""
+    """Get all orders grouped by status for Kanban board view.
+
+    Returns a dictionary where keys are status values and values
+    are lists of orders in that status. Useful for drag-and-drop
+    Kanban UI components.
+
+    Args:
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        dict: {status_value: [OrderOut, ...]} for each status.
+    """
     statuses = [OrderStatus.NEW, OrderStatus.DIAGNOSTICS, OrderStatus.IN_PROGRESS,
                 OrderStatus.WAITING_PARTS, OrderStatus.READY, OrderStatus.COMPLETED]
 
@@ -104,7 +145,19 @@ async def get_order(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single order with works and parts."""
+    """Get a single work order with all works and parts.
+
+    Args:
+        order_id: Order database ID.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        OrderOut: Complete order data with works, parts, and totals.
+
+    Raises:
+        HTTPException 404: Order not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Order).where(
             Order.id == order_id,
@@ -124,7 +177,23 @@ async def create_order(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new order."""
+    """Create a new work order.
+
+    Validates that the car and client exist before creating the order.
+    Auto-generates order number in format ON-YYYY-NNNNN.
+
+    Args:
+        data: OrderCreate with car_id, client_id, manager_id (required),
+              and optional mechanic_id, type, description, notes, priority.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        OrderOut: Created order with auto-generated number and calculated totals.
+
+    Raises:
+        HTTPException 404: Car or client not found or belongs to another tenant.
+    """
     # Verify car and client exist
     car_result = await db.execute(
         select(Car).where(Car.id == data.car_id, Car.tenant_id == current_user.tenant_id)
@@ -173,7 +242,23 @@ async def update_order(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update order."""
+    """Update an existing work order. Only provided fields are updated.
+
+    Automatically tracks started_at and completed_at timestamps
+    when status changes to IN_PROGRESS or COMPLETED.
+
+    Args:
+        order_id: Order database ID.
+        data: OrderUpdate with fields to update (all optional).
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        OrderOut: Updated order data.
+
+    Raises:
+        HTTPException 404: Order not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Order).where(
             Order.id == order_id,
@@ -209,7 +294,23 @@ async def update_order_works(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update works in order."""
+    """Replace all works in an order.
+
+    Deletes existing works and adds new ones in a single transaction.
+    Useful when the UI sends the complete updated list.
+
+    Args:
+        order_id: Order database ID.
+        works: List of OrderWorkCreate with name, price, hours, employee_id.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        OrderOut: Updated order with new works and recalculated totals.
+
+    Raises:
+        HTTPException 404: Order not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Order).where(Order.id == order_id, Order.tenant_id == current_user.tenant_id)
     )
@@ -250,7 +351,22 @@ async def update_order_parts(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Update parts in order."""
+    """Replace all parts in an order.
+
+    Deletes existing parts and adds new ones in a single transaction.
+
+    Args:
+        order_id: Order database ID.
+        parts: List of OrderPartCreate with name, qty, price, sku, warehouse_part_id.
+        db: Database session.
+        current_user: Authenticated user.
+
+    Returns:
+        OrderOut: Updated order with new parts and recalculated totals.
+
+    Raises:
+        HTTPException 404: Order not found or belongs to another tenant.
+    """
     result = await db.execute(
         select(Order).where(Order.id == order_id, Order.tenant_id == current_user.tenant_id)
     )
