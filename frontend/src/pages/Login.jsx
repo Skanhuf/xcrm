@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/auth';
+import { login, register } from '../services/auth';
 import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const [mode, setMode] = useState('login'); // 'login' or 'register'
   const [loginVal, setLoginVal] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +20,17 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = await login(loginVal, password);
-      setAuth(data.access_token, { name: 'Администратор', role: 'admin' });
-      navigate('/');
+      if (mode === 'register') {
+        const data = await register(name, loginVal, password, phone);
+        setAuth(data.access_token, { name: data.name, role: data.role });
+        navigate('/');
+      } else {
+        const data = await login(loginVal, password);
+        setAuth(data.access_token, { name: 'Администратор', role: 'admin' });
+        navigate('/');
+      }
     } catch (err) {
-      setError(err.message || 'Ошибка входа');
+      setError(err.message || 'Ошибка');
     } finally {
       setLoading(false);
     }
@@ -60,6 +69,20 @@ export default function Login() {
               </div>
             )}
 
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Имя</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-bg border border-surface/50 text-white placeholder-slate-600 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                  placeholder="Иван Иванов"
+                  required
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-400 mb-2">Логин</label>
               <input
@@ -84,24 +107,50 @@ export default function Login() {
               />
             </div>
 
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Телефон</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-bg border border-surface/50 text-white placeholder-slate-600 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                  placeholder="+79991234567"
+                />
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-accent to-blue-600 text-white font-semibold hover:shadow-glow transition-all duration-200 disabled:opacity-50"
             >
-              {loading ? 'Вход...' : 'Войти'}
+              {loading ? 'Вход...' : mode === 'register' ? 'Зарегистрироваться' : 'Войти'}
             </button>
           </form>
 
-          {/* Demo button */}
-          <div className="mt-4 pt-4 border-t border-accent/10">
+          {/* Toggle mode */}
+          <div className="mt-4 text-center">
             <button
-              onClick={demoLogin}
-              className="w-full py-2.5 rounded-xl border border-surface/50 text-slate-400 hover:text-white hover:border-accent/30 transition-all text-sm"
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+              className="text-sm text-accent hover:text-white transition-colors"
             >
-              Демо-режим (без сервера)
+              {mode === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
             </button>
           </div>
+
+          {/* Demo button */}
+          {mode === 'login' && (
+            <div className="mt-4 pt-4 border-t border-accent/10">
+              <button
+                onClick={demoLogin}
+                className="w-full py-2.5 rounded-xl border border-surface/50 text-slate-400 hover:text-white hover:border-accent/30 transition-all text-sm"
+              >
+                Демо-режим (без сервера)
+              </button>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-slate-600 text-xs mt-6">
