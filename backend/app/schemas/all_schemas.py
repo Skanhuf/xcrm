@@ -297,7 +297,7 @@ class WarehousePartOut(BaseModel):
 
 class FinanceEntryCreate(BaseModel):
     order_id: Optional[int] = None
-    type: str = Field(..., regex="^(income|expense)$")
+    type: str = Field(..., pattern="^(income|expense)$")
     amount: float = Field(..., gt=0)
     method: PaymentMethod = PaymentMethod.CASH
     description: str = ""
