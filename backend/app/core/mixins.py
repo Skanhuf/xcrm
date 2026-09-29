@@ -1,3 +1,8 @@
+"""SQLAlchemy model mixins.
+
+Reusable column definitions for common patterns.
+"""
+
 from datetime import datetime, timezone
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column

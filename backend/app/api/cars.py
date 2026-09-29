@@ -1,3 +1,8 @@
+"""Vehicle management endpoints.
+
+Provides CRUD operations for client vehicles with search and filtering.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

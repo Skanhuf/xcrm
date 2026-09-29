@@ -1,3 +1,9 @@
+"""Finance tracking and dashboard statistics endpoints.
+
+Provides financial transaction management, monthly summaries,
+and dashboard analytics with revenue trends.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession

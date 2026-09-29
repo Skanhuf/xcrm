@@ -1,3 +1,8 @@
+"""JWT authentication utilities.
+
+Provides token validation and current user extraction from requests.
+"""
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select

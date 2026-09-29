@@ -1,3 +1,8 @@
+"""Password hashing utilities.
+
+Uses bcrypt algorithm for secure password storage.
+"""
+
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

@@ -1,1 +1,4 @@
-from app.api import auth, clients, cars, orders, warehouse, finance, templates
+"""API route modules.
+
+Each module handles a specific domain (auth, clients, orders, etc.).
+"""

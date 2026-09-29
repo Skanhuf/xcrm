@@ -1,3 +1,5 @@
+"""Pydantic schemas for API request/response validation."""
+
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
@@ -8,18 +10,21 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
+    """User role in the system."""
     ADMIN = "admin"
     MANAGER = "manager"
     MECHANIC = "mechanic"
 
 
 class EmployeeStatus(str, Enum):
+    """Employee availability status."""
     ACTIVE = "active"
     BUSY = "busy"
     OFF = "off"
 
 
 class OrderStatus(str, Enum):
+    """Order lifecycle status."""
     NEW = "new"
     DIAGNOSTICS = "diagnostics"
     IN_PROGRESS = "in_progress"
@@ -29,6 +34,7 @@ class OrderStatus(str, Enum):
 
 
 class Priority(str, Enum):
+    """Order priority level."""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -36,6 +42,7 @@ class Priority(str, Enum):
 
 
 class PaymentMethod(str, Enum):
+    """Payment method for transactions."""
     CASH = "cash"
     CARD = "card"
     TRANSFER = "transfer"
@@ -45,11 +52,13 @@ class PaymentMethod(str, Enum):
 
 
 class LoginRequest(BaseModel):
+    """Login credentials for authentication."""
     login: str
     password: str
 
 
 class RegisterRequest(BaseModel):
+    """New user registration data."""
     name: str = Field(..., min_length=2, max_length=150)
     login: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=6)
@@ -57,11 +66,13 @@ class RegisterRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """JWT token response."""
     access_token: str
     token_type: str = "bearer"
 
 
 class UserOut(BaseModel):
+    """User data returned in API responses."""
     id: int
     name: str
     login: str
@@ -77,6 +88,7 @@ class UserOut(BaseModel):
 
 
 class ClientCreate(BaseModel):
+    """Create a new client."""
     name: str = Field(..., min_length=1, max_length=200)
     phone: Optional[str] = ""
     email: Optional[str] = ""
@@ -86,6 +98,7 @@ class ClientCreate(BaseModel):
 
 
 class ClientUpdate(BaseModel):
+    """Update client fields (only provided fields will be updated)."""
     name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -95,6 +108,7 @@ class ClientUpdate(BaseModel):
 
 
 class ClientOut(BaseModel):
+    """Client data with aggregated counts."""
     id: int
     name: str
     phone: str
@@ -112,6 +126,7 @@ class ClientOut(BaseModel):
 
 
 class CarCreate(BaseModel):
+    """Create a new vehicle for a client."""
     client_id: int
     brand: str = Field(..., min_length=1, max_length=100)
     model: str = Field(..., min_length=1, max_length=100)
@@ -124,6 +139,7 @@ class CarCreate(BaseModel):
 
 
 class CarUpdate(BaseModel):
+    """Update vehicle fields (only provided fields will be updated)."""
     brand: Optional[str] = None
     model: Optional[str] = None
     year: Optional[int] = None
@@ -135,6 +151,7 @@ class CarUpdate(BaseModel):
 
 
 class CarOut(BaseModel):
+    """Vehicle data."""
     id: int
     client_id: int
     brand: str
@@ -189,6 +206,7 @@ class OrderPartUpdate(BaseModel):
 
 
 class OrderCreate(BaseModel):
+    """Create a new work order."""
     car_id: int
     client_id: int
     manager_id: int
@@ -200,6 +218,7 @@ class OrderCreate(BaseModel):
 
 
 class OrderUpdate(BaseModel):
+    """Update order fields (only provided fields will be updated)."""
     status: Optional[OrderStatus] = None
     priority: Optional[Priority] = None
     mechanic_id: Optional[int] = None
@@ -208,6 +227,7 @@ class OrderUpdate(BaseModel):
 
 
 class OrderWorkOut(BaseModel):
+    """Work task in an order."""
     id: int
     name: str
     price: float
@@ -219,6 +239,7 @@ class OrderWorkOut(BaseModel):
 
 
 class OrderPartOut(BaseModel):
+    """Part used in an order."""
     id: int
     name: str
     qty: float
@@ -230,6 +251,7 @@ class OrderPartOut(BaseModel):
 
 
 class OrderOut(BaseModel):
+    """Work order with works, parts, and calculated totals."""
     id: int
     number: str
     car_id: int
@@ -257,6 +279,7 @@ class OrderOut(BaseModel):
 
 
 class WarehousePartCreate(BaseModel):
+    """Create a new warehouse inventory item."""
     name: str = Field(..., min_length=1, max_length=200)
     sku: Optional[str] = ""
     category: Optional[str] = ""
@@ -268,6 +291,7 @@ class WarehousePartCreate(BaseModel):
 
 
 class WarehousePartUpdate(BaseModel):
+    """Update warehouse item fields (only provided fields will be updated)."""
     name: Optional[str] = None
     sku: Optional[str] = None
     category: Optional[str] = None
@@ -279,6 +303,7 @@ class WarehousePartUpdate(BaseModel):
 
 
 class WarehousePartOut(BaseModel):
+    """Warehouse inventory item."""
     id: int
     name: str
     sku: str
@@ -296,6 +321,7 @@ class WarehousePartOut(BaseModel):
 
 
 class FinanceEntryCreate(BaseModel):
+    """Create a financial transaction (income or expense)."""
     order_id: Optional[int] = None
     type: str = Field(..., pattern="^(income|expense)$")
     amount: float = Field(..., gt=0)
@@ -304,6 +330,7 @@ class FinanceEntryCreate(BaseModel):
 
 
 class FinanceEntryOut(BaseModel):
+    """Financial transaction data."""
     id: int
     order_id: Optional[int]
     type: str
@@ -319,6 +346,7 @@ class FinanceEntryOut(BaseModel):
 
 
 class DashboardStats(BaseModel):
+    """Dashboard statistics for the current period."""
     today_revenue: float = 0
     today_orders: int = 0
     active_orders: int = 0
@@ -332,6 +360,7 @@ class DashboardStats(BaseModel):
 
 
 class MonthlyRevenue(BaseModel):
+    """Monthly revenue data point."""
     month: str
     revenue: float
 
@@ -340,6 +369,7 @@ class MonthlyRevenue(BaseModel):
 
 
 class WorkTemplateItemCreate(BaseModel):
+    """Create an item within a work template."""
     name: str = Field(..., min_length=1, max_length=200)
     price: float = 0
     hours: float = 0
@@ -349,6 +379,7 @@ class WorkTemplateItemCreate(BaseModel):
 
 
 class WorkTemplateItemOut(BaseModel):
+    """Work template item with calculated totals."""
     id: int
     name: str
     price: float
@@ -361,6 +392,7 @@ class WorkTemplateItemOut(BaseModel):
 
 
 class WorkTemplateCreate(BaseModel):
+    """Create a new work procedure template."""
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = ""
     is_default: bool = False
@@ -368,6 +400,7 @@ class WorkTemplateCreate(BaseModel):
 
 
 class WorkTemplateUpdate(BaseModel):
+    """Update template fields (only provided fields will be updated)."""
     name: Optional[str] = None
     description: Optional[str] = None
     is_default: Optional[bool] = None
@@ -375,6 +408,7 @@ class WorkTemplateUpdate(BaseModel):
 
 
 class WorkTemplateOut(BaseModel):
+    """Work template with items."""
     id: int
     name: str
     description: str

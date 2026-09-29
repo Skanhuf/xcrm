@@ -1,1 +1,4 @@
-from app.models.all_models import *  # noqa
+"""SQLAlchemy ORM models.
+
+All models support multi-tenancy via tenant_id for data isolation.
+"""

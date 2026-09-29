@@ -1,3 +1,9 @@
+"""Work procedure templates management.
+
+Provides CRUD operations for reusable work templates that can be
+applied to orders (e.g., seasonal tire change, oil service).
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession

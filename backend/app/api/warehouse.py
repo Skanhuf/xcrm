@@ -1,3 +1,9 @@
+"""Warehouse inventory management endpoints.
+
+Provides CRUD operations for parts with category filtering,
+low stock alerts, and search functionality.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession

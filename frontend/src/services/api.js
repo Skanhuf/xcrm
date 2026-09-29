@@ -1,7 +1,15 @@
+/**
+ * API client for XCRM backend.
+ * Handles authentication headers and HTTP requests.
+ */
+
 import { useAuthStore } from '../store/authStore';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+/**
+ * Get request headers with auth token.
+ */
 function getHeaders(extra = {}) {
   const { token } = useAuthStore.getState();
   const headers = { 'Content-Type': 'application/json', ...extra };

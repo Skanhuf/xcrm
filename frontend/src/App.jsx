@@ -1,3 +1,8 @@
+/**
+ * XCRM - CRM system for auto services.
+ * Main application router with protected routes.
+ */
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './store/authStore';
 import Login from './pages/Login';
@@ -13,6 +18,9 @@ import Cars from './pages/Cars';
 import OrderDetail from './pages/OrderDetail';
 import Layout from './components/Layout';
 
+/**
+ * Protected routes wrapper - redirects to login if not authenticated.
+ */
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;

@@ -1,3 +1,8 @@
+"""JWT token creation and validation.
+
+Uses PyJWT library with HS256 algorithm.
+"""
+
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 

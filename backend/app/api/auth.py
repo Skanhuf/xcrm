@@ -1,8 +1,14 @@
+"""Authentication endpoints.
+
+Handles user login, registration, and profile retrieval.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import settings
 from app.core.database import get_async_session
 from app.core.passwords import hash_password, verify_password
 from app.core.tokens import create_access_token
@@ -52,7 +58,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_async_s
         role=UserRole.ADMIN if is_first else UserRole.MANAGER,
         phone=data.phone or "",
         status=EmployeeStatus.ACTIVE,
-        tenant_id=1,  # Default tenant - will be changed in production
+        tenant_id=1,  # First tenant ID - production should use proper tenant creation
     )
 
     db.add(user)
@@ -63,6 +69,6 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_async_s
 
 
 @router.get("/me", response_model=UserOut)
-async def get_me(user: User = Depends(lambda: None)):
-    """Get current user info."""
+async def get_me(user: User = Depends(get_current_user)):
+    """Get current authenticated user info."""
     return UserOut.model_validate(user)

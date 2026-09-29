@@ -29,3 +29,6 @@ postgres_data/
 
 # Logs
 *.log
+
+# Server admin guide (contains sensitive info)
+SERVER-GUIDE.md

@@ -1,3 +1,8 @@
+"""Order management endpoints.
+
+Handles work orders with Kanban board support, works, and parts management.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession

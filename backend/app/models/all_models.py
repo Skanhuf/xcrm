@@ -1,3 +1,8 @@
+"""Database models for XCRM.
+
+All models support multi-tenancy via tenant_id field.
+"""
+
 from sqlalchemy import String, Text, Integer, Boolean, Enum as SAEnum, DECIMAL, ForeignKey, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
@@ -12,18 +17,21 @@ import enum
 
 
 class UserRole(str, enum.Enum):
+    """User role in the system."""
     ADMIN = "admin"
     MANAGER = "manager"
     MECHANIC = "mechanic"
 
 
 class EmployeeStatus(str, enum.Enum):
+    """Employee availability status."""
     ACTIVE = "active"
     BUSY = "busy"
     OFF = "off"
 
 
 class OrderStatus(str, enum.Enum):
+    """Order lifecycle status."""
     NEW = "new"
     DIAGNOSTICS = "diagnostics"
     IN_PROGRESS = "in_progress"
@@ -33,6 +41,7 @@ class OrderStatus(str, enum.Enum):
 
 
 class Priority(str, enum.Enum):
+    """Order priority level."""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -40,6 +49,7 @@ class Priority(str, enum.Enum):
 
 
 class PaymentMethod(str, enum.Enum):
+    """Payment method for transactions."""
     CASH = "cash"
     CARD = "card"
     TRANSFER = "transfer"
@@ -49,7 +59,11 @@ class PaymentMethod(str, enum.Enum):
 
 
 class TenantModel(Base, TimestampMixin):
-    """Base model with tenant_id for multi-tenancy."""
+    """Base model with tenant_id for multi-tenancy.
+    
+    All business models inherit from this to support data isolation
+    between different auto service tenants.
+    """
     __abstract__ = True
 
     tenant_id: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -59,6 +73,7 @@ class TenantModel(Base, TimestampMixin):
 
 
 class User(TenantModel):
+    """System user - manager, mechanic, or admin."""
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -84,6 +99,7 @@ class User(TenantModel):
 
 
 class Client(TenantModel):
+    """Client - company or individual customer."""
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -108,6 +124,7 @@ class Client(TenantModel):
 
 
 class Car(TenantModel):
+    """Vehicle belonging to a client."""
     __tablename__ = "cars"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -136,6 +153,7 @@ class Car(TenantModel):
 
 
 class Order(TenantModel):
+    """Order (work order) - main business entity linking client, car, works, and parts."""
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -172,6 +190,7 @@ class Order(TenantModel):
 
 
 class OrderWork(TenantModel):
+    """Individual work task within an order (e.g., oil change, brake replacement)."""
     __tablename__ = "order_works"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -195,6 +214,7 @@ class OrderWork(TenantModel):
 
 
 class OrderPart(TenantModel):
+    """Parts used in an order (can be from warehouse or ordered separately)."""
     __tablename__ = "order_parts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -218,6 +238,7 @@ class OrderPart(TenantModel):
 
 
 class WarehousePart(TenantModel):
+    """Warehouse inventory item - part available for use in orders."""
     __tablename__ = "warehouse_parts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -240,6 +261,7 @@ class WarehousePart(TenantModel):
 
 
 class WorkTemplate(TenantModel):
+    """Template for standard work procedures (e.g., seasonal tire change)."""
     __tablename__ = "work_templates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -253,6 +275,7 @@ class WorkTemplate(TenantModel):
 
 
 class WorkTemplateItem(TenantModel):
+    """Individual item within a work template (work task + optional part)."""
     __tablename__ = "work_template_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -273,6 +296,7 @@ class WorkTemplateItem(TenantModel):
 
 
 class FinanceEntry(TenantModel):
+    """Financial transaction - income or expense linked to an order."""
     __tablename__ = "finance_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
