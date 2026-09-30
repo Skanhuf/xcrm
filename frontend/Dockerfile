@@ -6,7 +6,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps --registry=https://registry.npmmirror.com
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 
